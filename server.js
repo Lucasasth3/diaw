@@ -11,6 +11,25 @@ let produtos = [
     { id: 5, descricao: "Feijão 1kg", preco: 7.50, categoria: "Grãos", estoque: 25 }
 ];
 
+let proximoId = 6;
+
+function validarProduto(body) {
+    const erros = [];
+    if (typeof body.descricao !== 'string' || body.descricao.trim() === '') {
+        erros.push("descricao é obrigatória e deve ser uma string");
+    }
+    if (typeof body.preco !== 'number' || isNaN(body.preco)) {
+        erros.push("preco é obrigatório e deve ser um número");
+    }
+    if (typeof body.categoria !== 'string' || body.categoria.trim() === '') {
+        erros.push("categoria é obrigatória e deve ser uma string");
+    }
+    if (typeof body.estoque !== 'number' || !Number.isInteger(body.estoque)) {
+        erros.push("estoque é obrigatório e deve ser um número inteiro");
+    }
+    return erros;
+}
+
 app.get('/produtos', (req, res) => {
     res.json(produtos);
 });
@@ -23,10 +42,10 @@ app.get('/produtos/:id', (req, res) => {
 });
 
 app.post('/produtos', (req, res) => {
-    const novoProduto = {
-        id: produtos.length + 1,
-        ...req.body
-    };
+    const erros = validarProduto(req.body);
+    if (erros.length > 0) return res.status(400).json({ erros });
+
+    const novoProduto = { id: proximoId++, ...req.body };
     produtos.push(novoProduto);
     res.status(201).json(novoProduto);
 });
@@ -34,9 +53,11 @@ app.post('/produtos', (req, res) => {
 app.put('/produtos/:id', (req, res) => {
     const id = parseInt(req.params.id);
     const index = produtos.findIndex(p => p.id === id);
-    
     if (index === -1) return res.status(404).json({ erro: "Produto não encontrado" });
-    
+
+    const erros = validarProduto(req.body);
+    if (erros.length > 0) return res.status(400).json({ erros });
+
     produtos[index] = { id, ...req.body };
     res.json(produtos[index]);
 });
@@ -44,13 +65,9 @@ app.put('/produtos/:id', (req, res) => {
 app.delete('/produtos/:id', (req, res) => {
     const id = parseInt(req.params.id);
     const index = produtos.findIndex(p => p.id === id);
-
-    if (index === -1) {
-        return res.status(404).json({ erro: "Id não encontrado" });
-    }
-
-    produtos.splice(index, 1); 
-    res.status(204).send();    
+    if (index === -1) return res.status(404).json({ erro: "Id não encontrado" });
+    produtos.splice(index, 1);
+    res.status(204).send();
 });
 
 const PORT = process.env.PORT || 3000;
