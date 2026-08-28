@@ -70,6 +70,14 @@ app.delete('/produtos/:id', (req, res) => {
     res.status(204).send();
 });
 
+app.use((req,res, next) =>{
+    const id = parseInt(req.params);
+    next();
+    res.status(204).send();
+})
+
+app.use ('/site', express.static('site'))
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`Servidor ouvindo em http://localhost:${PORT}`);
