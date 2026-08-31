@@ -3,6 +3,9 @@ const app = express();
 
 app.use(express.json());
 
+
+app.use(express.static('public'));
+
 let produtos = [
     { id: 1, descricao: "Banana Prata", preco: 8.99, categoria: "Frutas", estoque: 10 },
     { id: 2, descricao: "Leite integral 1L", preco: 2.99, categoria: "Laticínios", estoque: 20 },
@@ -69,14 +72,6 @@ app.delete('/produtos/:id', (req, res) => {
     produtos.splice(index, 1);
     res.status(204).send();
 });
-
-app.use((req,res, next) =>{
-    const id = parseInt(req.params);
-    next();
-    res.status(204).send();
-})
-
-app.use ('/site', express.static('site'))
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
