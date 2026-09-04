@@ -6,6 +6,11 @@ app.use(express.json());
 
 app.use(express.static('public'));
 
+const usuarios = [
+    { id: 1, usuario: "admin", senha: "123" },
+    { id: 2, usuario: "joao", senha: "456" }
+];
+
 let produtos = [
     { id: 1, descricao: "Banana Prata", preco: 8.99, categoria: "Frutas", estoque: 10 },
     { id: 2, descricao: "Leite integral 1L", preco: 2.99, categoria: "Laticínios", estoque: 20 },
@@ -53,6 +58,20 @@ app.post('/produtos', (req, res) => {
     res.status(201).json(novoProduto);
 });
 
+app.post('/login', (req, res) => {
+    const { usuario, senha } = req.body;
+
+    const usuarioEncontrado = usuarios.find(
+        u => u.usuario === usuario && u.senha === senha
+    );
+
+    if (!usuarioEncontrado) {
+        return res.status(401).json({ erro: "Usuário ou senha inválidos" });
+    }
+
+    res.json({ mensagem: "Login realizado com sucesso!" });
+});
+
 app.put('/produtos/:id', (req, res) => {
     const id = parseInt(req.params.id);
     const index = produtos.findIndex(p => p.id === id);
@@ -72,6 +91,8 @@ app.delete('/produtos/:id', (req, res) => {
     produtos.splice(index, 1);
     res.status(204).send();
 });
+
+
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
