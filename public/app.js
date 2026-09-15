@@ -10,12 +10,36 @@ const productList = document.getElementById('product-list');
 const btnSalvar = document.getElementById('btn-salvar');
 const btnCancelar = document.getElementById('btn-cancelar');
 
+document.addEventListener('DOMContentLoaded', async () => {
+    await checarSessao();
+    carregarProdutos();
+});
 
-document.addEventListener('DOMContentLoaded', carregarProdutos);
+async function checarSessao() {
+    const resposta = await fetch('/usuario');
+    
+    if (resposta.status === 401) {
+        window.location.href = '/login.html';
+        return;
+    }
+
+    const usuarioLogado = await resposta.json();
+    document.getElementById('info-usuario').textContent = `Olá, ${usuarioLogado.usuario}`;
+}
+
+document.getElementById('btn-logout').addEventListener('click', async () => {
+    await fetch('/logout', { method: 'POST' }); 
+    window.location.href = '/login.html';       
+});
 
 async function carregarProdutos() {
     try {
         const response = await fetch(API_URL);
+        if (response.status === 401) {
+            window.location.href = '/login.html';
+            return;
+        }
+        
         const produtos = await response.json();
         
         productList.innerHTML = '';
@@ -51,14 +75,12 @@ form.addEventListener('submit', async (e) => {
     };
 
     if (id) {
-        
         await fetch(`${API_URL}/${id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(produto)
         });
     } else {
-        
         await fetch(API_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },

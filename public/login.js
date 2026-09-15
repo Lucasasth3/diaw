@@ -18,7 +18,7 @@ formLogin.addEventListener('submit', (e) => {
     })
     .then(response => {
         if (response.ok) {
-            alert('Login bem-sucedido!');
+            window.location.href = '/index.html';
         } else {
             response.json().then(resultado => {
                 msgErro.textContent = resultado.erro || 'Erro ao realizar login';

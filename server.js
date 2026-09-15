@@ -1,9 +1,12 @@
 const express = require('express');
+const cookieParser = require('cookie-parser');
+const jwt = require('jsonwebtoken');
+
 const app = express();
+const JWT_SECRET = "uma-chave-secreta";
 
 app.use(express.json());
-
-
+app.use(cookieParser());
 app.use(express.static('public'));
 
 const usuarios = [
@@ -38,26 +41,6 @@ function validarProduto(body) {
     return erros;
 }
 
-app.get('/produtos', (req, res) => {
-    res.json(produtos);
-});
-
-app.get('/produtos/:id', (req, res) => {
-    const id = parseInt(req.params.id);
-    const produto = produtos.find(p => p.id === id);
-    if (!produto) return res.status(404).json({ erro: "Produto não encontrado" });
-    res.json(produto);
-});
-
-app.post('/produtos', (req, res) => {
-    const erros = validarProduto(req.body);
-    if (erros.length > 0) return res.status(400).json({ erros });
-
-    const novoProduto = { id: proximoId++, ...req.body };
-    produtos.push(novoProduto);
-    res.status(201).json(novoProduto);
-});
-
 app.post('/login', (req, res) => {
     const { usuario, senha } = req.body;
 
@@ -69,10 +52,67 @@ app.post('/login', (req, res) => {
         return res.status(401).json({ erro: "Usuário ou senha inválidos" });
     }
 
+    const token = jwt.sign(
+        { id: usuarioEncontrado.id, usuario: usuarioEncontrado.usuario },
+        JWT_SECRET,
+        { expiresIn: "30m" }
+    );
+
+    res.cookie("token", token, {
+        httpOnly: true,
+        sameSite: "strict",
+        secure: false,
+        maxAge: 30 * 60 * 1000
+    });
+
     res.json({ mensagem: "Login realizado com sucesso!" });
 });
 
-app.put('/produtos/:id', (req, res) => {
+function autenticar(req, res, next) {
+    const token = req.cookies.token;
+    if (!token) {
+        return res.status(401).json({ erro: "Não autenticado" });
+    }
+    
+    try {
+        const dados = jwt.verify(token, JWT_SECRET);
+        req.usuario = dados;
+        next();
+    } catch (erro) {
+        return res.status(401).json({ erro: "Token inválido ou expirado" });
+    }
+}
+
+app.get('/usuario', autenticar, (req, res) => {
+    res.json({ id: req.usuario.id, usuario: req.usuario.usuario });
+});
+
+app.post('/logout', (req, res) => {
+    res.clearCookie("token");
+    res.json({ mensagem: "Logout realizado com sucesso" });
+});
+
+app.get('/produtos', autenticar, (req, res) => {
+    res.json(produtos);
+});
+
+app.get('/produtos/:id', autenticar, (req, res) => {
+    const id = parseInt(req.params.id);
+    const produto = produtos.find(p => p.id === id);
+    if (!produto) return res.status(404).json({ erro: "Produto não encontrado" });
+    res.json(produto);
+});
+
+app.post('/produtos', autenticar, (req, res) => {
+    const erros = validarProduto(req.body);
+    if (erros.length > 0) return res.status(400).json({ erros });
+
+    const novoProduto = { id: proximoId++, ...req.body };
+    produtos.push(novoProduto);
+    res.status(201).json(novoProduto);
+});
+
+app.put('/produtos/:id', autenticar, (req, res) => {
     const id = parseInt(req.params.id);
     const index = produtos.findIndex(p => p.id === id);
     if (index === -1) return res.status(404).json({ erro: "Produto não encontrado" });
@@ -84,15 +124,13 @@ app.put('/produtos/:id', (req, res) => {
     res.json(produtos[index]);
 });
 
-app.delete('/produtos/:id', (req, res) => {
+app.delete('/produtos/:id', autenticar, (req, res) => {
     const id = parseInt(req.params.id);
     const index = produtos.findIndex(p => p.id === id);
     if (index === -1) return res.status(404).json({ erro: "Id não encontrado" });
     produtos.splice(index, 1);
     res.status(204).send();
 });
-
-
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
